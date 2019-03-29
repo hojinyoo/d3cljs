@@ -1,0 +1,5 @@
+* cljs + d3 https://github.com/stevebuik/Stu
+
+d3 extern, devcards ...
+
+* extern generator https://github.com/jmmk/javascript-externs-generator

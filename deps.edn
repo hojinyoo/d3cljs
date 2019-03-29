@@ -1,0 +1,10 @@
+{:paths ["src/main"
+         "src/test"]
+
+ :deps {org.clojure/clojure {:mvn/version "1.10.0-beta6"}
+        org.clojure/clojurescript {:mvn/version "1.10.439"}
+        cider/cider-nrepl {:mvn/version "0.21.1"}
+        refactor-nrepl {:mvn/version "2.4.0"}}
+
+ :aliases {:dev {:extra-deps {binaryage/devtools {:mvn/version "0.9.10"}}
+                 :extra-paths ["src/dev"]}}}
