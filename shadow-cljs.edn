@@ -3,26 +3,38 @@
  :nrepl {:port 5555
          :middleware [refactor-nrepl.middleware/wrap-refactor]}
 
- :builds {:d3cljs
+ :builds {:devcards
+          {:target :browser
+           :output-dir "resources/public/devcards"
+           :asset-path "/devcards"
+           :modules {:main {:entries [d3cljs.devcards]}}
+           :compiler-options {:infer-externs :auto
+                              :external-config
+                              {:devtools/config {:features-to-install
+                                                 [:formatters :hints]}}}
+           :dev {:compiler-options {:devcards true}}
+           :devtools {:http-root "resources/public"
+                      :http-port 3001
+                      :autoload true
+                      :preloads [devtools.preload
+                                 devcards.core]}}
+
+          :d3cljs
           {:target :browser
            :output-dir "resources/public/js"
            :asset-path "/js"
-
            :modules {:main {:entries [d3cljs.core]}}
-
            :compiler-options {:infer-externs :auto
                               :external-config
                               {:devtools/config {:features-to-install
                                                  [:formatters :hints]}}}
            :devtools {:http-root "resources/public"
                       :http-port 3000
-
                       :loader-mode :eval
                       :preloads [devtools.preload]}
            :dev {:compiler-options {:optimizations :whitespace
                                     :source-map true
                                     :devcards true}}
-
            :release {:closure-defines {"goog.DEBUG" false}
                      :js-options {:minimize-require true}
                      :compiler-options {:optimizations :advanced}}}}}

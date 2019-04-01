@@ -3,10 +3,14 @@
   "version": "0.0.1",
   "private": true,
   "devDependencies": {
-    "shadow-cljs": "2.8.25"
+    "shadow-cljs": "2.8.25",
+    "showdown": "^1.9.0"
   },
   "dependencies": {
     "@observablehq/stdlib": "^3.0.1",
-    "d3": "^5.9.2"
+    "d3": "^5.9.2",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-faux-dom": "^4.5.0"
   }
 }
