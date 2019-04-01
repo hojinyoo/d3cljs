@@ -1,222 +1,95 @@
 (ns d3cljs.core
-  ;; (:refer-clojure :exclude [force remove])
-  ;; (:require ["d3/dist/d3.min" :as d3])
-  )
+  (:refer-clojure :exclude [force remove])
+  (:require-macros [d3cljs.util :as util])
+  (:require
+   ["d3" :as d3]
+   [applied-science.js-interop :as j]
+   [cljs.spec.alpha :as s]
+   [clojure.test.check.generators :as gen]))
 
-#_(def app (.. d3 (select "#app")))
+(def app (.. d3 (select "#app")))
+(def width 600)
+(def height 600)
+(def fill (d3/scaleOrdinal d3/schemeCategory10))
 
-(def width 960)
-(def height 500)
-#_(def fill (d3/scaleOrdinal d3/schemeCategory10))
+(defonce data (-> "https://gist.githubusercontent.com/mbostock/4062045/raw/5916d145c8c048a6e3086915a6be464467391c62/miserables.json"
+                  util/slurp
+                  js/JSON.parse
+                  (js->clj :keywordize-keys true)))
 
-;; selected_node = null,
-;; selected_link = null,
-;; mousedown_link = null,
-;; mousedown_node = null,
-;; mouseup_node = null;
-(def state (atom {}))
-
-(declare vis)
-#_(defn rescale
-    "rescale g"
-    []
-    (let [trans d3/event.translate
-          scale d3/event.scale]
-      (.. vis
-          (attr "transform" (str "translate(" trans ") scale(" scale ")")))))
-
-#_(def zoom (.. d3
-                (zoom)
-                (on "zoom" rescale)))
-
-#_(def outer (.. app
+(defonce svg (.. app
                  (append "svg:svg")
                  (attr "width" width)
-                 (attr "height" height)
-                 (attr "pointer-events" "all")))
+                 (attr "height" height)))
 
-#_(def vis (.. outer
-               (append "svg:g")
-               (call zoom)
-               (on "dblclick.zoom" nil)
-               (append "svg:g")))
+(defn drag- [sim]
+  (let [drag-started (fn [d]
+                       (let [active (j/get-in d3 [:event :active])]
+                         (when-not ^boolean active
+                           (.. sim
+                               (alphaTarget 0.3)
+                               (restart))))
+                       (let [{:keys [x y]} (j/lookup d)]
+                         (j/assoc! d :fx x :fy y)))
+        dragged (fn [d]
+                  (let [{:keys [x y]} (j/lookup (j/get d3 :event))]
+                    (j/assoc! d :fx x :fy y)))
+        drag-ended (fn [d]
+                     (let [active (j/get-in d3 [:event :active])]
+                       (when-not ^boolean active
+                         (.. sim
+                             (alphaTarget 0))))
+                     (j/assoc! d :fx nil :fy nil))]
+    (.. d3
+        (drag)
+        (on "start" drag-started)
+        (on "drag" dragged)
+        (on "end" drag-ended))))
 
-#_(.. vis
-      (append "svg:rect")
-      (attr "width" width)
-      (attr "height" height)
-      (attr "fill" "white"))
-
-(declare tick)
-#_(def force (.. (d3/forceSimulation)
-                 (size #js [width height])
-                 (nodes #js [ #js {}])
-                 (linkDistance 50)
-                 (charge -200)
-                 (on "tick" tick)))
-
-#_(def drag-line (.. vis
-                     (append "line")
-                     (attr "class" "drag_line")
-                     (attr "x1" 0)
-                     (attr "y1" 0)
-                     (attr "x2" 0)
-                     (attr "y2" 0)))
-
-#_(def nodes (.nodes force))
-#_(def links (.links force))
-
-#_(def node (.. vis
-                (selectAll ".node")))
-#_(def link (.. vis
-                (selectAll ".link")))
-(declare keydown)
-#_(.. d3
-      (select js/window)
-      (on "keydown" keydown))
-
-(declare redraw)
-#_(redraw)
-
-#_(defn mousedown []
-    (let [{:keys [mousedown-node mousedown-link]} @state]
-      (when-not (or mousedown-node mousedown-link)
-        (.. vis
-            (call zoom)))))
-
-#_(defn mousemove []
-    (let [{:keys [mousedown-node]} @state]
-      (when mousedown-node
-        (this-as this
-          (.. drag-line
-              (attr "x1" (.-x mousedown-node))
-              (attr "y1" (.-y mousedown-node))
-              (attr "x2" (aget (d3/mouse this) 0))
-              (attr "y2" (aget (d3/mouse this) 1)))))))
-
-(declare reset-mouse-vars)
-#_(defn mouseup []
-    (let [{:keys [mousedown-node mouseup-node]} @state]
-      (when mousedown-node
-        (this-as this
-          (.. drag-line
-              (attr "class" "drag_line_hidden"))
-          (when-not mouseup-node
-            (let [point (d3/mouse this)
-                  node #js {:x (aget point 0)
-                            :y (aget point 1)}]
-              (.. nodes
-                  (push node))
-              (swap! state assoc :selected-node node)
-              (swap! state assoc :selected-link nil)
-              (.. links
-                  (push #js {:source mousedown-node :target node}))))
-          (redraw)))
-      (reset-mouse-vars)))
-
-#_(defn reset-mouse-vars []
-    (swap! state assoc :mousedown-node nil)
-    (swap! state assoc :mouseup-node nil)
-    (swap! state assoc :mousedown-link nil))
-
-#_(defn tick []
-    (.. link
-        (attr "x1" (fn [d] (.. d -source -x)))
-        (attr "y1" (fn [d] (.. d -source -y)))
-        (attr "x2" (fn [d] (.. d -target -x)))
-        (attr "y2" (fn [d] (.. d -target -y))))
+(defn ->chart [svg]
+  (let [nodes (clj->js (:nodes data))
+        links (clj->js (:links data))
+        force-link (.. d3
+                       (forceLink links)
+                       (id #(j/get % :id)))
+        simulation (.. d3
+                       (forceSimulation nodes)
+                       (force "link" force-link)
+                       (force "charge" (.forceManyBody d3))
+                       (force "center" (.forceCenter d3 (/ width 2) (/ height 2))))
+        link (.. svg
+                 (append "g")
+                 (attr "stroke" "#999")
+                 (attr "stroke-opacity" 0.6)
+                 (selectAll "line")
+                 (data links)
+                 (join "line")
+                 (attr "stroke-width" #(Math/sqrt (j/get % :value))))
+        node (.. svg
+                 (append "g")
+                 (attr "stroke" "#fff")
+                 (attr "stroke-width" 1.5)
+                 (selectAll "circle")
+                 (data nodes)
+                 (join "circle")
+                 (attr "r" 5)
+                 (attr "fill" #(fill (j/get % :group)))
+                 (call (drag- simulation)))]
     (.. node
-        (attr "cx" (fn [d] (.. d -x)))
-        (attr "cy" (fn [d] (.. d -y)))))
-
-#_(defn redraw []
-    (let [link- (.. link (data links))]
-      (.. link-
-          (enter)
-          (insert "line" ".node")
-          (attr "class" "link")
-          (on "mousedown" (fn [d]
-                            (swap! state :mousedown-link d)
-                            (let [{:keys [mousedown-link selected-link]} @state]
-                              (if (= mousedown-link selected-link)
-                                (swap! state assoc :selected-link nil)
-                                (swap! state assoc :selected-link mousedown-link))
-                              (swap! state assoc :selected-link nil))
-                            (redraw))))
-      (.. link-
-          (exit)
-          (remove))
-      (.. link-
-          (classed "link_selected" (fn [d] (= d (:selected-link @state))))))
-    (let [node- (.. node (data nodes))]
-      (.. node-
-          (enter)
-          (insert "circle")
-          (attr "class" "node")
-          (attr "r" 5)
-          (on "mousedown"
-              (fn [d]
-                (.. vis (call zoom nil))
-                (swap! state assoc :mousedown-node d)
-                (let [{:keys [mousedown-node selected-node]} @state]
-                  (if (= mousedown-node selected-node)
-                    (swap! state assoc :selected-node nil)
-                    (swap! state assoc :selected-node mousedown-node))
-                  (swap! state assoc :selected-link nil)
-                  (.. drag-line
-                      (attr "class" "link")
-                      (attr "x1" (.-x mousedown-node))
-                      (attr "y1" (.-y mousedown-node))
-                      (attr "x2" (.-x mousedown-node))
-                      (attr "y2" (.-y mousedown-node)))
-                  (redraw))))
-          (on "mousedrag" (fn [d]))
-          (on "mouseup"
-              (fn [d]
-                (let [{:keys [mousedown-node mouseup-node]} @state]
-                  (swap! state assoc :mouseup-node d)
-                  (if (= mouseup-node mousedown-node)
-                    (reset-mouse-vars)))
-                (let [{:keys [mousedown-node mouseup-node]} @state
-                      link-- #js {:source mousedown-node :target mouseup-node}]
-                  (.push links link)
-                  (swap! state assoc :selected-link link)
-                  (swap! state assoc :selected-node nil)
-                  (.. vis (call zoom rescale)))))
-          (transition)
-          (duration 750)
-          (ease "elastic")
-          (attr "r" 6.5))
-      (.. node-
-          (exit)
-          (transition)
-          (attr "r" 0)
-          (remove))
-      (.. node-
-          (classed "node_selected" (fn [d] (= d (:selected-node @state))))))
-    (when d3/event
-      (.preventDefault d3/event))
-    (.start force))
-
-#_(defn splice-links-for-node [node]
-    (let [to-splice (.filter links (fn [l] (or (= (.-source l) node) (= (.-target l) node))))]
-      (.map to-splice (fn [l] (.splice links (.indexOf links l) 1)))))
-
-#_(defn keydown []
-    (let [{:keys [selected-node selected-link]} @state]
-      (when (or selected-node selected-link)
-        (case (.-keyCode d3/event.)
-          (8 46) (do
-                   (cond
-                     selected-node (do
-                                     (.splice nodes (.. nodes (.indexOf selected-node)) 1)
-                                     (splice-links-for-node selected-node))
-                     selected-link (.splice links (.. links indexOf selected-link) 1))
-                   (swap! state
-                          assoc
-                          :selected-link nil
-                          :selected-node nil)
-                   (redraw))))))
+        (append "title")
+        (text #(j/get % :id)))
+    (.. simulation
+        (on "tick" (fn []
+                     (.. link
+                         (attr "x1" #(j/get-in % [:source :x]))
+                         (attr "y1" #(j/get-in % [:source :y]))
+                         (attr "x2" #(j/get-in % [:target :x]))
+                         (attr "y2" #(j/get-in % [:target :y])))
+                     (.. node
+                         (attr "cx" #(j/get % :x))
+                         (attr "cy" #(j/get % :y))))))
+    (.. svg (node))))
 
 (defn ^:export go []
-  (prn "start!"))
+  (prn "start!")
+  (->chart svg))

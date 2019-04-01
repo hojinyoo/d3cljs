@@ -6,6 +6,7 @@
     "shadow-cljs": "2.8.25"
   },
   "dependencies": {
+    "@observablehq/stdlib": "^3.0.1",
     "d3": "^5.9.2"
   }
 }
