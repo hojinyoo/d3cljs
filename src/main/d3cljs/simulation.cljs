@@ -24,7 +24,7 @@
 (def outer (.. app
                (append "svg:svg")
                (attr "width" width)
-               (attr "height" height)
+               (attr "height" height)ㅠ
                (attr "pointer-events" "all")))
 
 (def vis (.. outer

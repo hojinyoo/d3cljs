@@ -1,9 +1,9 @@
 (ns d3cljs.core
   (:require-macros [d3cljs.util :as util])
   (:require
-   ["d3" :as d3]
    [cljs.spec.alpha :as spec]
    ;; [applied-science.js-interop :as j]
+   [d3cljs.basic :as basic]
    [reagent.core :as reagent]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -14,7 +14,10 @@
    [:p "D3 test page"]
    [:section
     [:h2 [:strong "Basics"]]
-    [:h3 [:code ":elem"] " piece"]]])
+    [:h3 [:code ":elem"] " piece"]
+    [basic/test-1 {}]
+    [basic/test-2 {}]]])
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize App

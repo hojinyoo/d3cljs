@@ -15,6 +15,7 @@
            :devtools {:http-root "resources/public"
                       :http-port 3000
                       :loader-mode :eval
+                      :after-load d3cljs.core/reload
                       :preloads [devtools.preload
                                  day8.re-frame-10x.preload]}
            :dev {:modules {:devcards {:entries [d3cljs.devcards]
