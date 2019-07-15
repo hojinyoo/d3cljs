@@ -1,0 +1,19 @@
+{
+  "name": "d3cljs",
+  "version": "0.0.1",
+  "private": true,
+  "devDependencies": {
+    "highlight.js": "^9.15.8",
+    "react-flip-move": "^3.0.2",
+    "react-highlight.js": "^1.0.7",
+    "shadow-cljs": "2.8.40",
+    "showdown": "^1.9.0",
+    "marked": "^0.6.2"
+  },
+  "dependencies": {
+    "create-react-class": "^15.6.3",
+    "d3": "^5.9.2",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6"
+  }
+}
