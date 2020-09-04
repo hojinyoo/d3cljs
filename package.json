@@ -7,7 +7,7 @@
     "react-flip-move": "^3.0.2",
     "react-highlight.js": "^1.0.7",
     "shadow-cljs": "2.8.40",
-    "showdown": "^1.9.0",
+    "showdown": "^1.9.1",
     "marked": "^0.6.2"
   },
   "dependencies": {
